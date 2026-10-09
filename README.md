@@ -72,11 +72,66 @@ ai-dropshipping-decision-planner/
 └── vite.config.ts               # Vite configuration
 ```
 
-### Data Flow
-1. User interacts with a highly responsive React frontend.
-2. `axios` intercepts the request and sends it to the Express REST API (running on `localhost:8080`).
-3. Express processes business logic, interacting with the MongoDB cluster via Mongoose models.
-4. Responses are sent back, and UI state is seamlessly animated using Framer Motion.
+### 🔄 System Architecture & Data Flow
+
+```mermaid
+graph TD
+    %% Users
+    User((User))
+    
+    %% Frontend
+    subgraph Frontend [React Frontend - Vite/Netlify]
+        UI[User Interface]
+        State[React State & Context]
+        Components[Pages & Components]
+    end
+    
+    %% Backend
+    subgraph Backend [Express Backend - Node/Render]
+        API[REST API Routes]
+        AI_Engine[AI Evaluation Engine]
+        Models[Mongoose Models]
+    end
+    
+    %% Database & External Services
+    DB[(MongoDB Atlas)]
+    LLM{{OpenRouter / AI API}}
+    
+    %% Relationships
+    User -->|Interacts| UI
+    UI <-->|Updates| State
+    State <-->|Renders| Components
+    Components -->|Axios HTTP| API
+    
+    API <-->|Reads/Writes| Models
+    Models <-->|Mongoose Queries| DB
+    API -->|Product Context Prompt| AI_Engine
+    AI_Engine <-->|Generates JSON Insights| LLM
+```
+
+### 📈 Core Execution Workflow
+
+The application guides the user through a robust, step-by-step pipeline for evaluating product dropshipping viability.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant AI as OpenRouter AI
+    participant DB as MongoDB
+
+    U->>F: Inputs Product & Supplier Data
+    F->>B: POST /api/analysis/evaluate
+    B->>AI: Send E-commerce Prompt
+    AI-->>B: Return Structured JSON Insights
+    B->>DB: Store Final Session Data
+    B-->>F: Return Evaluation Metrics
+    F->>U: Display Scores, Charts, & Recommendations
+    U->>F: Start Step-by-Step Execution Workflow
+    F->>B: Sync Pipeline State (In Progress -> Completed)
+    U->>F: Request Final Report (PDF / Excel)
+```
 
 ## 🚀 Installation and Setup
 
