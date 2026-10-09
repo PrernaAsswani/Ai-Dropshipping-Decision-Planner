@@ -29,7 +29,7 @@ app.use(cors({
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 5000 // 5000 in dev
 });
 app.use('/api', limiter);
 
@@ -75,7 +75,7 @@ const connectDB = async () => {
   }
 };
 
-app.listen(PORT, async () => {
+app.listen(PORT as number, '0.0.0.0', async () => {
   await connectDB();
   console.log(`Server running on port ${PORT}`);
 });

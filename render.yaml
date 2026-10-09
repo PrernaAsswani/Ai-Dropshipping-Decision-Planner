@@ -14,3 +14,5 @@ services:
         sync: false # Set this in Render dashboard to your Netlify frontend URL (e.g., https://your-app.netlify.app)
       - key: MONGODB_URI
         sync: false # Set this in Render dashboard to your MongoDB Atlas URI
+      - key: OPENROUTER_API_KEY
+        sync: false # Set this in Render dashboard to your OpenRouter API key
