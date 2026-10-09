@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: decision-planner-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run server
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: APP_URL
+        sync: false # Set this in Render dashboard to your Netlify frontend URL (e.g., https://your-app.netlify.app)
+      - key: MONGODB_URI
+        sync: false # Set this in Render dashboard to your MongoDB Atlas URI
