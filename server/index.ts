@@ -64,18 +64,39 @@ const connectDB = async () => {
     // Seed initial data if empty
     const count = await Supplier.countDocuments();
     if (count === 0) {
-      console.log('Seeding initial suppliers and products...');
+      console.log('[Startup] Seeding initial suppliers and products...');
       const s1 = await Supplier.create({ name: 'TechSource Global', rating: 4.8, deliveryTimeDays: 4, returnRate: 2.1, qualityScore: 94, priceLevel: 'Medium' });
       await Product.create({ name: 'Wireless Earbuds', category: 'Electronics', cost: 600, sellingPrice: 1999, additionalCost: 150, rating: 4.6, salesVolume: 'High', supplierId: s1._id });
+      console.log('[Startup] Seeding completed.');
+    } else {
+      console.log(`[Startup] Database already seeded (${count} suppliers found). Skipping seed.`);
     }
 
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('[Startup] MongoDB connection error:', error);
     process.exit(1);
   }
 };
 
-app.listen(PORT as number, '0.0.0.0', async () => {
+// Health Check Endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Droplify API is running', health: '/health' });
+});
+
+// Start Server safely
+const startServer = async () => {
+  console.log('[Startup] Starting application initialization...');
   await connectDB();
-  console.log(`Server running on port ${PORT}`);
+  
+  app.listen(PORT as number, '0.0.0.0', () => {
+    console.log(`[Startup] HTTP Server actively listening on port ${PORT}`);
+  });
+};
+
+startServer().catch(err => {
+  console.error('[Startup] Unhandled rejection during server startup:', err);
+  process.exit(1);
 });
