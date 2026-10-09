@@ -13,7 +13,8 @@
     "server": "tsx server/index.ts",
     "build:server": "npx esbuild server/index.ts server/seed.ts --bundle --platform=node --format=esm --outdir=dist/server --packages=external",
     "start:server": "node dist/server/index.js",
-    "seed": "node dist/server/seed.js"
+    "seed": "node dist/server/seed.js",
+    "seed:demo": "tsx server/seed.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
