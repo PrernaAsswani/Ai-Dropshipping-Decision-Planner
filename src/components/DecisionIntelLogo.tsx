@@ -38,8 +38,8 @@ export default function DecisionIntelLogo({ compact = false, className }: Decisi
 
       {!compact && (
         <span className="leading-none tracking-tight">
-          <span className="font-extrabold text-slate-950">Decision</span>
-          <span className="font-semibold text-slate-600">Intel</span>
+          <span className="font-extrabold text-slate-950">Drop</span>
+          <span className="font-semibold text-slate-600">lify</span>
         </span>
       )}
     </div>

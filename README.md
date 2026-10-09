@@ -1,7 +1,7 @@
-<h1 align="center">AI Dropshipping Decision Planner</h1>
+<h1 align="center">Droplify</h1>
 
 <p align="center">
-  <strong>A full-stack decision intelligence platform for modern e-commerce and dropshipping businesses.</strong>
+  <strong>A full-stack AI dropshipping intelligence platform for modern e-commerce.</strong>
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 
 ## 📖 Overview
 
-The **AI Dropshipping Decision Planner** is a comprehensive, full-stack application designed to help e-commerce entrepreneurs evaluate product viability, assess supplier reliability, and make data-driven decisions before launching a product. 
+**Droplify** is a comprehensive, full-stack application designed to help e-commerce entrepreneurs evaluate product viability, assess supplier reliability, and make data-driven decisions before launching a product. 
 
 Unlike basic CRUD applications, this platform implements a dynamic **AI Scoring Engine** (running on the backend) that evaluates products across multiple dimensions—such as demand, profitability, and supplier risk—to generate detailed, actionable recommendations.
 
