@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const isProd = import.meta.env.PROD;
+const API_URL = isProd 
+  ? (import.meta.env.VITE_API_URL || 'https://droplify-fof1.onrender.com/api')
+  : 'http://localhost:8080/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
