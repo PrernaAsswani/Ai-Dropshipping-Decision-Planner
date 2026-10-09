@@ -16,38 +16,45 @@ export default function Dashboard() {
   
   const [activities, setActivities] = useState<Activity[]>([]);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
-      const products = await getProducts();
-      const suppliers = await getSuppliers();
-      const workflows = await getWorkflows();
-      const activitiesData = await getActivities();
-      
-      setActivities(activitiesData.slice(0, 5));
+      try {
+        const products = await getProducts();
+        const suppliers = await getSuppliers();
+        const workflows = await getWorkflows();
+        const activitiesData = await getActivities();
+        
+        setActivities(activitiesData.slice(0, 5));
 
-    let highDemandCount = 0;
-    let totalMargin = 0;
+        let highDemandCount = 0;
+        let totalMargin = 0;
 
-    products.forEach(p => {
-      if (p.salesVolume === 'High') highDemandCount++;
-      totalMargin += calculateProfit(p).margin;
-    });
+        products.forEach(p => {
+          if (p.salesVolume === 'High') highDemandCount++;
+          totalMargin += calculateProfit(p).margin;
+        });
 
-    let reliableSuppliersCount = 0;
-    suppliers.forEach(s => {
-      if (calculateSupplierScore(s).reliability >= 85) reliableSuppliersCount++;
-    });
+        let reliableSuppliersCount = 0;
+        suppliers.forEach(s => {
+          if (calculateSupplierScore(s).reliability >= 85) reliableSuppliersCount++;
+        });
 
-    const activeWorkflowsCount = workflows.filter(w => w.status === 'In Progress').length;
+        const activeWorkflowsCount = workflows.filter(w => w.status === 'In Progress').length;
 
-    setStats({
-      totalProducts: products.length,
-      highDemand: highDemandCount,
-      avgMargin: products.length ? (totalMargin / products.length) : 0,
-      reliableSuppliers: reliableSuppliersCount,
-      totalSuppliers: suppliers.length,
-      activeWorkflows: activeWorkflowsCount,
-    });
+        setStats({
+          totalProducts: products.length,
+          highDemand: highDemandCount,
+          avgMargin: products.length ? (totalMargin / products.length) : 0,
+          reliableSuppliers: reliableSuppliersCount,
+          totalSuppliers: suppliers.length,
+          activeWorkflows: activeWorkflowsCount,
+        });
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        setError('Failed to load dashboard data. Please check your connection or API status.');
+      }
     };
     fetchData();
   }, []);

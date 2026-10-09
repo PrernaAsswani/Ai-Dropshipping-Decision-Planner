@@ -29,10 +29,22 @@ export default function ProductsPage() {
     supplierId: '',
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
-      setProducts(await getProducts());
-      setSuppliers(await getSuppliers());
+      try {
+        setIsLoading(true);
+        setProducts(await getProducts());
+        setSuppliers(await getSuppliers());
+        setError(null);
+      } catch (err) {
+        console.error('Failed to fetch products or suppliers:', err);
+        setError('Failed to load products. Please ensure the API is running and accessible.');
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, []);
