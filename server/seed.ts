@@ -45,8 +45,7 @@ const seedData = async () => {
 
     console.log('Logging activity...');
     await Activity.create({
-      action: 'System Initialized',
-      description: 'Demo seed data populated in MongoDB.',
+      message: 'System Initialized: Demo seed data populated in MongoDB.',
       timestamp: new Date()
     });
 
