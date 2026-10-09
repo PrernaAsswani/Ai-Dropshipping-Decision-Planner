@@ -22,8 +22,21 @@ const PORT = process.env.PORT || 8080;
 
 // Security Middlewares
 app.use(helmet());
+const allowedOrigins = [
+  'https://droplify.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
+
+if (process.env.APP_URL) {
+  const envUrl = process.env.APP_URL.startsWith('http') ? process.env.APP_URL : `https://${process.env.APP_URL}`;
+  if (!allowedOrigins.includes(envUrl)) {
+    allowedOrigins.push(envUrl);
+  }
+}
+
 app.use(cors({
-  origin: process.env.APP_URL || 'http://localhost:3000',
+  origin: allowedOrigins,
   credentials: true
 }));
 
