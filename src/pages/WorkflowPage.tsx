@@ -51,11 +51,21 @@ export default function WorkflowPage() {
     if (currentStepIndex === -1) currentStepIndex = 0;
 
     const processStep = async () => {
-      if (currentStepIndex >= workflow.length) {
+      // Capture the current index for this specific iteration to prevent React state batching bugs
+      const activeIndex = currentStepIndex;
+
+      // Check if we are done using the latest index
+      if (activeIndex >= workflow.length) {
         setIsProcessing(false);
         setIsComplete(true);
-        // Save final state
-        await saveWorkflowForProduct(inputData.id, workflow.map(s => ({...s, status: 'COMPLETED', progress: 100})), 'Completed');
+        
+        // Ensure the final state is saved properly using the latest state
+        setWorkflow(prev => {
+          const finalWorkflow = prev.map(s => ({...s, status: 'COMPLETED' as const, progress: 100}));
+          saveWorkflowForProduct(inputData.id, finalWorkflow, 'Completed').catch(console.error);
+          return finalWorkflow;
+        });
+        
         showToast('Workflow completed successfully!');
         logActivity(`Workflow completed for ${inputData.name}`);
         return;
@@ -64,7 +74,7 @@ export default function WorkflowPage() {
       // Update current step to IN_PROGRESS
       setWorkflow(prev => {
         const updated = prev.map((step, idx) => {
-          if (idx === currentStepIndex) return { ...step, status: 'IN_PROGRESS' as const, progress: 50 };
+          if (idx === activeIndex) return { ...step, status: 'IN_PROGRESS' as const, progress: 50 };
           return step;
         });
         saveWorkflowForProduct(inputData.id, updated, 'In Progress').catch(console.error);
@@ -75,13 +85,14 @@ export default function WorkflowPage() {
         // Complete current step
         setWorkflow(prev => {
           const updated = prev.map((step, idx) => {
-            if (idx === currentStepIndex) return { ...step, status: 'COMPLETED' as const, progress: 100 };
+            if (idx === activeIndex) return { ...step, status: 'COMPLETED' as const, progress: 100 };
             return step;
           });
           saveWorkflowForProduct(inputData.id, updated, 'In Progress').catch(console.error);
           return updated;
         });
-        currentStepIndex++;
+        
+        currentStepIndex++; // Increment for the NEXT invocation of processStep
         
         // Short delay before starting next step
         setTimeout(processStep, 1000);
@@ -215,13 +226,13 @@ export default function WorkflowPage() {
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-slate-700">Progress</span>
-                      <span className="text-sm font-semibold text-slate-900">{step.progress}%</span>
+                      <span className="text-sm font-semibold text-slate-900">{isComplete ? 100 : step.progress}%</span>
                     </div>
                     <div className="w-full bg-white/80 rounded-full h-2 overflow-hidden ring-1 ring-slate-200/70">
                       <div
-                        style={{ width: `${step.progress}%` }}
+                        style={{ width: `${isComplete ? 100 : step.progress}%` }}
                         className={`h-full rounded-full transition-all duration-700 ${
-                          normalizeStatus(step.status) === 'completed'
+                          (isComplete || normalizeStatus(step.status) === 'completed')
                             ? 'bg-emerald-500'
                             : normalizeStatus(step.status) === 'in-progress'
                             ? 'bg-indigo-500'

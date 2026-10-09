@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { evaluateProduct, getDecisionReport } from '../services/api';
-import { Loader2, AlertCircle, ArrowRight, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowRight, ShieldCheck, CheckCircle2, AlertTriangle, XCircle, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { useData } from '../context/DataContext';
 import { getSuppliers, calculateSupplierScore, Supplier, logActivity } from '../services/storage';
 import { useToast } from '../context/ToastContext';
@@ -141,6 +144,77 @@ export default function AnalysisPage() {
     pricing: results.pricingScore ?? 0,
   };
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text(`Analysis Report: ${results.productName}`, 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Recommendation: ${report.recommendation}`, 14, 32);
+    doc.text(`Overall Score: ${report.overallScore}/100`, 14, 40);
+    doc.text(`Confidence: ${report.confidenceRating}%`, 14, 48);
+
+    doc.text('Performance Metrics:', 14, 60);
+    autoTable(doc, {
+      startY: 65,
+      head: [['Metric', 'Score']],
+      body: [
+        ['Demand Score', scores.product],
+        ['Profitability Score', scores.pricing],
+        ['Supplier Score', scores.supplier],
+        ['Profit Margin', `${results.profitMargin}%`],
+        ['Overall Risk', results.riskLevel],
+      ],
+    });
+
+    const currentY = (doc as any).lastAutoTable.finalY + 10;
+    doc.text('AI Summary (Strengths):', 14, currentY);
+    autoTable(doc, {
+      startY: currentY + 5,
+      head: [['Strength']],
+      body: report.strengths.map((s: string) => [s]),
+    });
+
+    const currentY2 = (doc as any).lastAutoTable.finalY + 10;
+    doc.text('AI Summary (Weaknesses):', 14, currentY2);
+    autoTable(doc, {
+      startY: currentY2 + 5,
+      head: [['Weakness']],
+      body: report.weaknesses.map((s: string) => [s]),
+    });
+
+    doc.save(`${results.productName.replace(/\s+/g, '_')}_Analysis.pdf`);
+    showToast('PDF downloaded successfully', 'info');
+  };
+
+  const exportExcel = () => {
+    const wsData = [
+      ['Product Name', results.productName],
+      ['Recommendation', report.recommendation],
+      ['Overall Score', report.overallScore],
+      ['Confidence Rating', `${report.confidenceRating}%`],
+      ['', ''],
+      ['Metric', 'Score'],
+      ['Demand Score', scores.product],
+      ['Profitability Score', scores.pricing],
+      ['Supplier Score', scores.supplier],
+      ['Profit Margin', `${results.profitMargin}%`],
+      ['Overall Risk', results.riskLevel],
+      ['', ''],
+      ['Strengths', ''],
+      ...report.strengths.map((s: string) => [s, '']),
+      ['', ''],
+      ['Weaknesses', ''],
+      ...report.weaknesses.map((s: string) => [s, ''])
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Analysis');
+    XLSX.writeFile(wb, `${results.productName.replace(/\s+/g, '_')}_Analysis.xlsx`);
+    showToast('Excel downloaded successfully', 'info');
+  };
+
   return (
     <div className="max-w-4xl mx-auto pb-12">
       <div className="flex justify-between items-center mb-8">
@@ -149,7 +223,15 @@ export default function AnalysisPage() {
           <p className="text-slate-500 text-lg font-medium text-indigo-900">{results.productName}</p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2 mr-4 border-r border-slate-200 pr-4">
+            <button onClick={exportPDF} className="btn-secondary py-1.5 px-3 text-sm flex items-center gap-1">
+              <Download className="w-4 h-4" /> PDF
+            </button>
+            <button onClick={exportExcel} className="btn-secondary py-1.5 px-3 text-sm flex items-center gap-1">
+              <Download className="w-4 h-4" /> Excel
+            </button>
+          </div>
           <div className="text-right">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1">Recommendation</p>
             <p className={`font-bold text-lg ${
