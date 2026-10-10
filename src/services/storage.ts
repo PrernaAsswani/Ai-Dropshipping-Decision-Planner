@@ -1,16 +1,49 @@
 import axios from 'axios';
 
 const isProd = import.meta.env.PROD;
-const API_URL = isProd 
+export const API_URL = isProd 
   ? (import.meta.env.VITE_API_URL || 'https://droplify-fof1.onrender.com/api')
   : 'http://localhost:8080/api';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+const pendingGets = new Map();
+
+export const dedupedGet = async (url: string) => {
+  if (pendingGets.has(url)) {
+    return pendingGets.get(url);
+  }
+  const promise = api.get(url).finally(() => {
+    pendingGets.delete(url);
+  });
+  pendingGets.set(url, promise);
+  return promise;
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response && error.response.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      // Only retry once and only if Retry-After is provided and reasonable (< 10 seconds for UX)
+      if (!error.config._retryCount && retryAfter) {
+        const delay = parseInt(retryAfter, 10) * 1000;
+        if (delay > 0 && delay <= 10000) {
+          error.config._retryCount = 1;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return api(error.config);
+        }
+      }
+      return Promise.reject(new Error("The server is temporarily rate-limiting requests. Please try again shortly."));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface Product {
   id: string;
@@ -59,7 +92,7 @@ export const resetDemoData = async () => {
 };
 
 export const getProducts = async (): Promise<Product[]> => {
-  const res = await api.get('/products');
+  const res = await dedupedGet('/products');
   return res.data;
 };
 
@@ -78,7 +111,7 @@ export const deleteProduct = async (id: string) => {
 };
 
 export const getSuppliers = async (): Promise<Supplier[]> => {
-  const res = await api.get('/suppliers');
+  const res = await dedupedGet('/suppliers');
   return res.data;
 };
 
@@ -97,7 +130,7 @@ export const deleteSupplier = async (id: string) => {
 };
 
 export const getWorkflows = async (): Promise<Workflow[]> => {
-  const res = await api.get('/workflows');
+  const res = await dedupedGet('/workflows');
   return res.data;
 };
 
@@ -116,7 +149,7 @@ export const saveWorkflowForProduct = async (productId: string, steps: WorkflowS
 };
 
 export const getActivities = async (): Promise<Activity[]> => {
-  const res = await api.get('/activities');
+  const res = await dedupedGet('/activities');
   return res.data;
 };
 

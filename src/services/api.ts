@@ -1,19 +1,7 @@
 import axios from 'axios';
-import { Product, Supplier, getSuppliers } from './storage';
-
-const isProd = import.meta.env.PROD;
-const API_URL = isProd 
-  ? (import.meta.env.VITE_API_URL || 'https://droplify-fof1.onrender.com/api')
-  : 'http://localhost:8080/api';
+import { Product, Supplier, getSuppliers, api, dedupedGet } from './storage';
 
 const ML_API_URL = import.meta.env.VITE_ML_API_URL || 'http://localhost:5001/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
 export const mlApi = axios.create({
   baseURL: ML_API_URL,
@@ -109,7 +97,7 @@ export const getModelMetrics = async () => {
 export const getWorkflowPlan = async (productId?: string) => {
   if (productId) {
     try {
-      const res = await api.get(`/workflows/product/${productId}`);
+      const res = await dedupedGet(`/workflows/product/${productId}`);
       if (res.data) {
         return res.data.steps;
       }

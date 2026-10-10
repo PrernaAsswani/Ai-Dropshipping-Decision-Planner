@@ -16,3 +16,16 @@ services:
         sync: false # Set this in Render dashboard to your MongoDB Atlas URI
       - key: OPENROUTER_API_KEY
         sync: false # Set this in Render dashboard to your OpenRouter API key
+
+  - type: web
+    name: droplify-ml-api
+    env: python
+    plan: free
+    rootDir: ml_api
+    buildCommand: pip install -r requirements.txt && python train.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 5001
