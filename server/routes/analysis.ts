@@ -26,63 +26,131 @@ const calculateSupplierScore = (supplier: any) => {
 
 let currentAnalysisSession: any = null;
 
+import axios from 'axios';
+
 router.post('/evaluate', async (req, res) => {
   try {
     const inputData = req.body;
-    
-    // 1. Demand Score
-    let demandScore = (inputData.rating / 5) * 80;
-    if (inputData.salesVolume === 'High') demandScore += 20;
-    else if (inputData.salesVolume === 'Medium') demandScore += 10;
-    demandScore = Math.min(100, Math.max(0, demandScore));
-
-    // 2. Profitability Score
-    const profitCalc = calculateProfit(inputData);
-    const profitMargin = profitCalc.margin;
-    let pricingScore = 0;
-    if (profitMargin > 40) pricingScore = 95;
-    else if (profitMargin > 30) pricingScore = 85;
-    else if (profitMargin > 20) pricingScore = 70;
-    else if (profitMargin > 10) pricingScore = 50;
-    else pricingScore = 30;
-
-    // 3. Supplier Score
-    let supplierScore = 50; 
-    let riskLevel = 'Medium';
-    let supplierReliability = 50;
     let linkedSupplier = null;
-    
     if (inputData.supplierId) {
       linkedSupplier = await Supplier.findById(inputData.supplierId);
-      if (linkedSupplier) {
-        const supCalc = calculateSupplierScore(linkedSupplier);
-        supplierReliability = supCalc.reliability;
-        riskLevel = supCalc.risk;
-        supplierScore = supplierReliability;
+    }
+
+    const profitCalc = calculateProfit(inputData);
+    let analysisResult: any = null;
+
+    if (process.env.OPENROUTER_API_KEY) {
+      try {
+        const prompt = `You are an expert e-commerce and dropshipping analyst.
+Evaluate this product for dropshipping viability:
+Product: ${inputData.name}
+Category: ${inputData.category}
+Cost: $${inputData.cost}
+Selling Price: $${inputData.sellingPrice}
+Additional Costs: $${inputData.additionalCost}
+Customer Rating: ${inputData.rating}/5
+Sales Volume: ${inputData.salesVolume}
+
+Supplier Info:
+Name: ${linkedSupplier ? linkedSupplier.name : 'Unknown'}
+Rating: ${linkedSupplier ? linkedSupplier.rating : 'N/A'}
+Delivery Time: ${linkedSupplier ? linkedSupplier.deliveryTimeDays : 'N/A'} days
+Return Rate: ${linkedSupplier ? linkedSupplier.returnRate : 'N/A'}%
+Quality Score: ${linkedSupplier ? linkedSupplier.qualityScore : 'N/A'}/100
+
+Respond strictly in valid JSON format with the following keys (all numbers 0-100 except riskLevel which is Low/Medium/High):
+{
+  "demandScore": <number>,
+  "pricingScore": <number>,
+  "supplierScore": <number>,
+  "overallScore": <number>,
+  "confidenceRating": <number>,
+  "riskLevel": "<Low|Medium|High>"
+}`;
+
+        const openRouterResponse = await axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            model: 'openai/gpt-3.5-turbo', // You can change this to any free/paid OpenRouter model
+            messages: [{ role: 'user', content: prompt }]
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+              'X-Title': 'Droplify',
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        const text = openRouterResponse.data.choices[0].message.content || '';
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          analysisResult = {
+            demandScore: parsed.demandScore,
+            pricingScore: parsed.pricingScore,
+            supplierScore: parsed.supplierScore,
+            overallScore: parsed.overallScore,
+            confidenceRating: parsed.confidenceRating,
+            riskLevel: parsed.riskLevel,
+          };
+        }
+      } catch (aiError) {
+        console.error("OpenRouter AI Generation failed, falling back to heuristic:", aiError);
       }
     }
 
-    const overallScore = Math.round((demandScore * 0.4) + (pricingScore * 0.4) + (supplierScore * 0.2));
+    // Fallback heuristic if AI fails or is not configured
+    if (!analysisResult) {
+      let demandScore = (inputData.rating / 5) * 80;
+      if (inputData.salesVolume === 'High') demandScore += 20;
+      else if (inputData.salesVolume === 'Medium') demandScore += 10;
+      demandScore = Math.min(100, Math.max(0, demandScore));
+
+      let pricingScore = 0;
+      if (profitCalc.margin > 40) pricingScore = 95;
+      else if (profitCalc.margin > 30) pricingScore = 85;
+      else if (profitCalc.margin > 20) pricingScore = 70;
+      else if (profitCalc.margin > 10) pricingScore = 50;
+      else pricingScore = 30;
+
+      let supplierScore = 50; 
+      let riskLevel = 'Medium';
+      
+      if (linkedSupplier) {
+        const supCalc = calculateSupplierScore(linkedSupplier);
+        supplierScore = supCalc.reliability;
+        riskLevel = supCalc.risk;
+      }
+
+      analysisResult = {
+        demandScore: Math.round(demandScore),
+        pricingScore: Math.round(pricingScore),
+        supplierScore: Math.round(supplierScore),
+        overallScore: Math.round((demandScore * 0.4) + (pricingScore * 0.4) + (supplierScore * 0.2)),
+        confidenceRating: Math.round(75 + (Math.random() * 20)),
+        riskLevel
+      };
+    }
 
     currentAnalysisSession = {
       productId: inputData.id,
       productName: inputData.name || 'Unknown Product',
-      productScore: Math.round(demandScore),
-      supplierScore: Math.round(supplierScore),
-      pricingScore: Math.round(pricingScore),
-      demandScore: Math.round(demandScore),
-      profitMargin: Math.round(profitMargin),
-      overallScore,
-      confidenceRating: Math.round(75 + (Math.random() * 20)),
-      riskLevel,
+      productScore: analysisResult.demandScore,
+      supplierScore: analysisResult.supplierScore,
+      pricingScore: analysisResult.pricingScore,
+      demandScore: analysisResult.demandScore,
+      profitMargin: Math.round(profitCalc.margin),
+      overallScore: analysisResult.overallScore,
+      confidenceRating: analysisResult.confidenceRating,
+      riskLevel: analysisResult.riskLevel,
       originalInput: inputData,
       supplier: linkedSupplier
     };
     
-    setTimeout(() => {
-      res.json(currentAnalysisSession);
-    }, 1500); // simulate delay
-
+    res.json(currentAnalysisSession);
   } catch (error) {
     res.status(500).json({ message: 'Analysis failed' });
   }

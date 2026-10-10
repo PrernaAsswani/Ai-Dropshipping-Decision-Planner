@@ -1,13 +1,22 @@
 import axios from 'axios';
-import { Product } from './storage';
+import { Product, Supplier, getSuppliers } from './storage';
 
 const isProd = import.meta.env.PROD;
 const API_URL = isProd 
   ? (import.meta.env.VITE_API_URL || 'https://droplify-fof1.onrender.com/api')
   : 'http://localhost:8080/api';
 
+const ML_API_URL = import.meta.env.VITE_ML_API_URL || 'http://localhost:5001/api';
+
 const api = axios.create({
   baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const mlApi = axios.create({
+  baseURL: ML_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,19 +34,76 @@ export const getScoreLabel = (score: number): string => {
   return 'Poor';
 };
 
+// Caching latest analysis session to maintain compatibility with existing pages
+let currentAnalysisSession: any = null;
+
 export const evaluateProduct = async (inputData: Product) => {
-  const res = await api.post('/analysis/evaluate', inputData);
-  return res.data;
+  let supplierData: Supplier | null = null;
+  if (inputData.supplierId) {
+    const suppliers = await getSuppliers();
+    supplierData = suppliers.find(s => s.id === inputData.supplierId) || null;
+  }
+
+  const payload = {
+    product: inputData,
+    supplier: supplierData
+  };
+
+  const res = await mlApi.post('/analyze/product', payload);
+  currentAnalysisSession = res.data;
+  
+  // Format response for existing components
+  return {
+    ...currentAnalysisSession,
+    productName: inputData.name || 'Unknown Product',
+    productScore: currentAnalysisSession.demandScore,
+  };
 };
 
 export const getAnalysisResults = async () => {
-  const res = await api.get('/analysis/results');
-  return res.data;
+  if (!currentAnalysisSession) return null;
+  return {
+    ...currentAnalysisSession,
+    productName: currentAnalysisSession.originalInput?.name || 'Unknown Product',
+    productScore: currentAnalysisSession.demandScore,
+    product: currentAnalysisSession.demandScore,
+    supplier: currentAnalysisSession.supplierScore,
+    pricing: currentAnalysisSession.pricingScore,
+  };
 };
 
 export const getDecisionReport = async () => {
-  const res = await api.get('/analysis/report');
-  return res.data;
+  if (!currentAnalysisSession) return null;
+  
+  // Convert Flask response to expected report format
+  return {
+    recommendation: currentAnalysisSession.recommendation,
+    status: currentAnalysisSession.status,
+    overallScore: currentAnalysisSession.overallScore,
+    riskLevel: currentAnalysisSession.riskLevel,
+    confidenceRating: currentAnalysisSession.confidenceRating,
+    strengths: [
+      `Demand Prediction: ${currentAnalysisSession.demand_prediction}`,
+      `Supplier Risk: ${currentAnalysisSession.supplier_risk_prediction}`
+    ],
+    weaknesses: [],
+    nextSteps: [
+       currentAnalysisSession.overallScore >= 75 ? "Proceed with product launch" : "Re-evaluate market viability"
+    ],
+    probabilities: {
+      demand: currentAnalysisSession.demand_probabilities,
+      supplierRisk: currentAnalysisSession.supplier_risk_probabilities
+    }
+  };
+};
+
+export const getModelMetrics = async () => {
+  try {
+    const res = await mlApi.get('/model/metrics');
+    return res.data;
+  } catch (error) {
+    return null;
+  }
 };
 
 export const getWorkflowPlan = async (productId?: string) => {

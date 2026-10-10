@@ -1,0 +1,31 @@
+{
+    "model_version": "1.0",
+    "dataset": "Synthetic",
+    "accuracy": 0.875,
+    "precision_macro": 0.8333712465878071,
+    "recall_macro": 0.7403650599959324,
+    "f1_macro": 0.7793830982685471,
+    "baseline_accuracy": 0.595,
+    "confusion_matrix": [
+        [
+            7,
+            0,
+            4
+        ],
+        [
+            0,
+            143,
+            6
+        ],
+        [
+            1,
+            14,
+            25
+        ]
+    ],
+    "classes": [
+        "High",
+        "Low",
+        "Medium"
+    ]
+}

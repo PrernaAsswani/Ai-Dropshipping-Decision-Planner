@@ -4,6 +4,10 @@ import { Download, Printer, AlertTriangle, CheckCircle, XCircle, Loader2, AlertC
 import { getDecisionReport } from '../services/api';
 import { motion } from 'motion/react';
 
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+
 export default function DecisionPage() {
   const [decision, setDecision] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,48 @@ export default function DecisionPage() {
   };
 
   const handleExport = (type: 'pdf' | 'excel') => {
-    alert(`Exporting report as ${type.toUpperCase()}... (Demo Feature)`);
+    if (type === 'excel') {
+      const ws = XLSX.utils.json_to_sheet([
+        { Metric: 'Recommendation', Value: decision.recommendation },
+        { Metric: 'Overall Score', Value: decision.overallScore },
+        { Metric: 'Risk Level', Value: decision.riskLevel },
+        { Metric: 'Confidence Rating', Value: decision.confidenceRating + '%' },
+        { Metric: 'Strengths', Value: decision.strengths.join(', ') },
+        { Metric: 'Weaknesses', Value: decision.weaknesses.join(', ') },
+        { Metric: 'Next Steps', Value: decision.nextSteps.join(', ') }
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Analysis Report");
+      XLSX.writeFile(wb, "Droplify_Report.xlsx");
+    } else if (type === 'pdf') {
+      const doc = new jsPDF();
+      doc.setFontSize(22);
+      doc.setTextColor(79, 70, 229);
+      doc.text('Droplify - Decision Report', 14, 22);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Recommendation: ${decision.recommendation}`, 14, 34);
+      doc.text(`Overall Score: ${decision.overallScore}/100`, 14, 42);
+      doc.text(`Risk Level: ${decision.riskLevel}`, 14, 50);
+      doc.text(`Confidence Rating: ${decision.confidenceRating}%`, 14, 58);
+
+      autoTable(doc, {
+        startY: 68,
+        head: [['Category', 'Details']],
+        body: [
+          ['Strengths', decision.strengths.join('\n')],
+          ['Weaknesses', decision.weaknesses.join('\n')],
+          ['Actionable Next Steps', decision.nextSteps.join('\n')]
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [79, 70, 229] },
+        styles: { cellPadding: 6, fontSize: 11, valign: 'middle' },
+        columnStyles: { 0: { cellWidth: 45, fontStyle: 'bold' } }
+      });
+
+      doc.save('Droplify_Report.pdf');
+    }
   };
 
   return (
