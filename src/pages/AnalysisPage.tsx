@@ -207,7 +207,7 @@ export default function AnalysisPage() {
             <div>
               <p className="text-xs text-slate-500 mb-1">Profit Margin</p>
               <p className={`font-bold text-lg ${results.profitMargin > 30 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {results.profitMargin}%
+                {results.profitMargin ? Number(results.profitMargin).toFixed(1) : '0'}%
               </p>
             </div>
             <div>

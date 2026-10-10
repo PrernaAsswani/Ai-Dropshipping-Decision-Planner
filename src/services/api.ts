@@ -45,6 +45,7 @@ export const evaluateProduct = async (inputData: Product) => {
     ...currentAnalysisSession,
     productName: inputData.name || 'Unknown Product',
     productScore: currentAnalysisSession.demandScore,
+    profitMargin: currentAnalysisSession.profit_margin,
   };
 };
 
@@ -57,6 +58,7 @@ export const getAnalysisResults = async () => {
     product: currentAnalysisSession.demandScore,
     supplier: currentAnalysisSession.supplierScore,
     pricing: currentAnalysisSession.pricingScore,
+    profitMargin: currentAnalysisSession.profit_margin,
   };
 };
 
