@@ -22,10 +22,10 @@ services:
     env: python
     plan: free
     rootDir: ml_api
-    buildCommand: pip install -r requirements.txt && python train.py
+    buildCommand: pip install --no-cache-dir -r requirements.txt && python train.py
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.11.6
       - key: PORT
         value: 5001
